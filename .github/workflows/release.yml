@@ -2,8 +2,8 @@ name: Build and Release MCDR Plugin
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -13,35 +13,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Get metadata and validate
+      - name: Get metadata
         id: meta
         run: |
           JSON_VERSION=$(jq -r '.version' mcdreforged.plugin.json)
-          
-          # 仅在因 tag 触发时进行校验
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            TAG_NAME=${GITHUB_REF#refs/tags/v}
-            if [ "$JSON_VERSION" != "$TAG_NAME" ]; then
-              echo "::error::Tag version ($TAG_NAME) does not match mcdreforged.plugin.json version ($JSON_VERSION)"
-              exit 1
-            fi
-          fi
-          
           NAME=$(jq -r '.name' mcdreforged.plugin.json)
           echo "version=$JSON_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$JSON_VERSION" >> $GITHUB_OUTPUT
           echo "name=$NAME" >> $GITHUB_OUTPUT
           echo "filename=${NAME}-${JSON_VERSION}.mcdr" >> $GITHUB_OUTPUT
 
       - name: Build MCDR Plugin
         run: |
-          # 打包 smptoolkit 文件夹和 mcdreforged.plugin.json 到 zip
           zip -r ${{ steps.meta.outputs.filename }} smptoolkit/ mcdreforged.plugin.json LICENSE README.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
         with:
+          tag_name: ${{ steps.meta.outputs.tag }}
           body_path: release.md
           files: ${{ steps.meta.outputs.filename }}
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
