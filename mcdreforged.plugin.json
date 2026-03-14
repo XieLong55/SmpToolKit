@@ -1,0 +1,11 @@
+{
+    "id": "SmpToolKit",
+    "version": "1.0.0",
+    "name": "SmpToolKit",
+    "description": "SmpToolKit for MCDR",
+    "author": "XieLongOwner",
+    "link": "https://github.com/XieLong55/SmpToolKit",
+    "dependencies": {
+        "mcdreforged": ">=2.0.0-alpha.1"
+    }
+}
