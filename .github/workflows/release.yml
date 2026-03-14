@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,11 +17,14 @@ jobs:
         id: meta
         run: |
           JSON_VERSION=$(jq -r '.version' mcdreforged.plugin.json)
-          TAG_NAME=${GITHUB_REF#refs/tags/v}
           
-          if [ "$JSON_VERSION" != "$TAG_NAME" ]; then
-            echo "::error::Tag version ($TAG_NAME) does not match mcdreforged.plugin.json version ($JSON_VERSION)"
-            exit 1
+          # 仅在因 tag 触发时进行校验
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG_NAME=${GITHUB_REF#refs/tags/v}
+            if [ "$JSON_VERSION" != "$TAG_NAME" ]; then
+              echo "::error::Tag version ($TAG_NAME) does not match mcdreforged.plugin.json version ($JSON_VERSION)"
+              exit 1
+            fi
           fi
           
           NAME=$(jq -r '.name' mcdreforged.plugin.json)
