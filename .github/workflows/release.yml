@@ -15,11 +15,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Get metadata
+      - name: Get metadata and extract notes
         id: meta
         run: |
           JSON_VERSION=$(jq -r '.version' mcdreforged.plugin.json)
           NAME=$(jq -r '.name' mcdreforged.plugin.json)
+          
+          # 提取 release.md 中对应当前版本的更新日志
+          # 逻辑：查找 ## [VERSION] 到下一个 ## [ 之间的内容
+          sed -n "/## \[$JSON_VERSION\]/,/## \[/p" release.md | sed '1d;$d' > current_release_notes.md
+          
+          # 如果提取为空（可能是没按格式写或者最后一个版本），尝试提取到文件末尾
+          if [ ! -s current_release_notes.md ]; then
+             sed -n "/## \[$JSON_VERSION\]/,\$p" release.md | sed '1d' > current_release_notes.md
+          fi
+
           echo "version=$JSON_VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$JSON_VERSION" >> $GITHUB_OUTPUT
           echo "name=$NAME" >> $GITHUB_OUTPUT
@@ -33,7 +43,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
-          body_path: release.md
+          body_path: current_release_notes.md
           files: ${{ steps.meta.outputs.filename }}
           make_latest: true
         env:
