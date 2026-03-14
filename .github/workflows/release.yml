@@ -1,0 +1,43 @@
+name: Build and Release MCDR Plugin
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get metadata and validate
+        id: meta
+        run: |
+          JSON_VERSION=$(jq -r '.version' mcdreforged.plugin.json)
+          TAG_NAME=${GITHUB_REF#refs/tags/v}
+          
+          if [ "$JSON_VERSION" != "$TAG_NAME" ]; then
+            echo "::error::Tag version ($TAG_NAME) does not match mcdreforged.plugin.json version ($JSON_VERSION)"
+            exit 1
+          fi
+          
+          NAME=$(jq -r '.name' mcdreforged.plugin.json)
+          echo "version=$JSON_VERSION" >> $GITHUB_OUTPUT
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+          echo "filename=${NAME}-${JSON_VERSION}.mcdr" >> $GITHUB_OUTPUT
+
+      - name: Build MCDR Plugin
+        run: |
+          # 打包 smptoolkit 文件夹和 mcdreforged.plugin.json 到 zip
+          zip -r ${{ steps.meta.outputs.filename }} smptoolkit/ mcdreforged.plugin.json LICENSE README.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          body_path: release.md
+          files: ${{ steps.meta.outputs.filename }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
